@@ -19,6 +19,7 @@ import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
+import static io.getarrays.contactapi.constant.Constant.PHOTO_DIRECTORY;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 
 @Service
@@ -39,7 +40,8 @@ public class ContactService {
     public void deleteContact(Contact contact){
     }
     public String uploadPhoto(String id, MultipartFile file){
-      Contact contact = getContact(id);
+        log.info("Saving picture for user ID:{}",id);
+        Contact contact = getContact(id);
       String photoUrl = photoFunction.apply(id,file);
       contact.setPhotoUrl(photoUrl);
       contactRepo.save(contact);
@@ -48,12 +50,13 @@ public class ContactService {
     private final Function<String,String> fileExtension=filename -> Optional.of(filename).filter(name -> name.contains("."))
             .map(name ->"."+ name.substring(filename.lastIndexOf(".")+1)).orElse(".png");
     private  final BiFunction<String,MultipartFile,String> photoFunction = (id,image) -> {
+       String filename =id+fileExtension.apply(image.getOriginalFilename());
         try {
-            Path fileStorageLocation  = Paths.get("").toAbsolutePath().normalize();
+            Path fileStorageLocation  = Paths.get(PHOTO_DIRECTORY ).toAbsolutePath().normalize();
            if(!Files.exists(fileStorageLocation)){Files.createDirectories(fileStorageLocation);
            }
-           Files.copy(image.getInputStream(),fileStorageLocation.resolve(id+fileExtension.apply(image.getOriginalFilename())),REPLACE_EXISTING);
-           return ServletUriComponentsBuilder.fromCurrentContextPath().path("/conctacts/image/"+id+fileExtension.apply(image.getOriginalFilename())).toUriString();
+           Files.copy(image.getInputStream(),fileStorageLocation.resolve(filename),REPLACE_EXISTING);
+           return ServletUriComponentsBuilder.fromCurrentContextPath().path("/conctacts/image/"+ filename).toUriString();
         }catch (Exception exception){
             throw new RuntimeException("Unable to save image");
         }
